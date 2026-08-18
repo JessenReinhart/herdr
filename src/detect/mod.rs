@@ -63,10 +63,11 @@ pub enum Agent {
     Qodercli,
     Qwen,
     Maki,
+    Crush,
 }
 
 impl Agent {
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 23] = [
         Self::Pi,
         Self::Claude,
         Self::Codex,
@@ -89,9 +90,10 @@ impl Agent {
         Self::Qodercli,
         Self::Qwen,
         Self::Maki,
+        Self::Crush,
     ];
 
-    pub const SCREEN_MANIFEST_AGENTS: [Self; 20] = [
+    pub const SCREEN_MANIFEST_AGENTS: [Self; 21] = [
         Self::Pi,
         Self::Claude,
         Self::Codex,
@@ -112,6 +114,7 @@ impl Agent {
         Self::Qodercli,
         Self::Qwen,
         Self::Maki,
+        Self::Crush,
     ];
 }
 
@@ -139,6 +142,7 @@ pub fn agent_label(agent: Agent) -> &'static str {
         Agent::Qodercli => "qodercli",
         Agent::Qwen => "qwen",
         Agent::Maki => "maki",
+        Agent::Crush => "crush",
     }
 }
 
@@ -172,6 +176,7 @@ pub fn interactive_agent_executable(agent: Agent) -> &'static str {
         Agent::Qodercli => "qodercli",
         Agent::Qwen => "qwen",
         Agent::Maki => "maki",
+        Agent::Crush => "crush",
     }
 }
 
@@ -209,6 +214,7 @@ fn lookup_agent(name: &str) -> Option<Agent> {
         "qodercli" | "qoderclicn" | "qoder" | "qodercn" => Some(Agent::Qodercli),
         "qwen" | "qwen-code" | "qwen code" => Some(Agent::Qwen),
         "maki" => Some(Agent::Maki),
+        "crush" | "crush-cli" => Some(Agent::Crush),
         _ => None,
     }
 }
@@ -734,6 +740,8 @@ mod tests {
         assert_eq!(identify_agent("qwen"), Some(Agent::Qwen));
         assert_eq!(identify_agent("Qwen Code"), Some(Agent::Qwen));
         assert_eq!(identify_agent("maki"), Some(Agent::Maki));
+        assert_eq!(identify_agent("crush"), Some(Agent::Crush));
+        assert_eq!(identify_agent("crush-cli"), Some(Agent::Crush));
     }
 
     #[test]
@@ -761,6 +769,8 @@ mod tests {
         assert_eq!(parse_agent_label("qwen-code"), Some(Agent::Qwen));
         assert_eq!(parse_agent_label("maki"), Some(Agent::Maki));
         assert_eq!(parse_agent_label("kilo-code"), Some(Agent::Kilo));
+        assert_eq!(parse_agent_label("crush"), Some(Agent::Crush));
+        assert_eq!(parse_agent_label("crush-cli"), Some(Agent::Crush));
     }
 
     #[test]
@@ -804,6 +814,7 @@ mod tests {
             (Agent::Qodercli, "qodercli"),
             (Agent::Qwen, "qwen"),
             (Agent::Maki, "maki"),
+            (Agent::Crush, "crush"),
         ];
         assert_eq!(expected.len(), Agent::ALL.len());
         for (agent, executable) in expected {
