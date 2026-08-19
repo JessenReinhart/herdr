@@ -79,6 +79,7 @@ const retryableErrorPattern =
 let reportSeq = Date.now() * 1000;
 let currentAgentSessionId: string | undefined;
 let currentAgentSessionPath: string | undefined;
+let currentAgentSessionName: string | undefined;
 
 function nextReportSeq(): number {
   reportSeq += 1;
@@ -105,6 +106,13 @@ function updateSessionRef(ctx: any): void {
     currentAgentSessionId = typeof id === "string" && id.length > 0 ? id : undefined;
   } catch {
     currentAgentSessionId = undefined;
+  }
+
+  try {
+    const name = ctx?.sessionManager?.getSessionName?.();
+    currentAgentSessionName = typeof name === "string" && name.length > 0 ? name : undefined;
+  } catch {
+    currentAgentSessionName = undefined;
   }
 }
 
@@ -156,6 +164,24 @@ function reportSession(sessionStartSource = "startup"): Promise<void> {
       seq: nextReportSeq(),
       session_start_source: sessionStartSource,
       ...sessionRef,
+    },
+  });
+}
+
+function reportSessionName(): Promise<void> {
+  if (!currentAgentSessionName) {
+    return Promise.resolve();
+  }
+
+  return sendRequest({
+    id: `${source}:title:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+    method: "pane.report_metadata",
+    params: {
+      pane_id: paneId,
+      source,
+      agent: "omp",
+      title: currentAgentSessionName,
+      seq: nextReportSeq(),
     },
   });
 }
@@ -330,6 +356,7 @@ export default function (pi) {
     rootSession = true;
     updateSessionRef(ctx);
     void reportSession(sessionStartSource);
+    void reportSessionName();
     return true;
   }
 
@@ -372,8 +399,9 @@ export default function (pi) {
     if (!activateRootSession(ctx)) {
       return;
     }
-    // A reload can replace this extension mid-run without emitting another agent_start.
-    agentActive = ctx?.isIdle?.() === false;
+    // Loading: the agent is initializing (model, session, context) and is not
+    // ready for input. Report working until the first agent_end settles.
+    agentActive = true;
     publishState(true);
   });
 
@@ -391,6 +419,7 @@ export default function (pi) {
     }
     updateSessionRef(ctx);
     void reportSession();
+    void reportSessionName();
     clearPendingTimers();
     clearFailureState();
     agentActive = true;
@@ -452,6 +481,18 @@ export default function (pi) {
     }
 
     scheduleIdle();
+  });
+
+  // A turn settles (agent loop ends, waiting for the next user prompt). Settle
+  // to idle immediately so the pane does not stay in Working after a stop.
+  pi.on("session_stop", () => {
+    if (!rootSession) {
+      return;
+    }
+    clearPendingTimers();
+    clearFailureState();
+    agentActive = false;
+    publishState(true);
   });
 
   pi.on("session_shutdown", () => {
