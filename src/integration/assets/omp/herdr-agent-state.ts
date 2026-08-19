@@ -180,7 +180,7 @@ function reportSessionName(): Promise<void> {
       pane_id: paneId,
       source,
       agent: "omp",
-      title: currentAgentSessionName,
+      display_agent: currentAgentSessionName,
       seq: nextReportSeq(),
     },
   });
@@ -399,9 +399,8 @@ export default function (pi) {
     if (!activateRootSession(ctx)) {
       return;
     }
-    // Loading: the agent is initializing (model, session, context) and is not
-    // ready for input. Report working until the first agent_end settles.
-    agentActive = true;
+    // A reload can replace this extension mid-run without emitting another agent_start.
+    agentActive = ctx?.isIdle?.() === false;
     publishState(true);
   });
 
